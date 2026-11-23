@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Қамшы — қазақтың ұлттық бұйымы | 3D анықтамалық</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky1:#bfe6ff; --sky2:#fff3d6; --gold:#f2a93b; --gold-d:#c7791a;
+    --ink:#3b2a1a; --card:#fffaf1; --green:#3fb37f; --blue:#3a8ee6; --red:#ef6b5b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;font-family:'Nunito',system-ui,'Segoe UI',Arial,sans-serif;color:var(--ink)}
+  body{background:radial-gradient(ellipse at 50% 20%,#ffffff 0%,var(--sky1) 45%,#9fd3f5 100%)}
+  #scene{position:fixed;inset:0;display:block}
+  /* ---------- top bar ---------- */
+  #topbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;width:min(96vw,980px);pointer-events:none}
+  #title{background:var(--card);padding:8px 22px;border-radius:999px;font-weight:900;font-size:clamp(16px,2.4vw,24px);box-shadow:0 6px 0 #e7d6b8,0 10px 24px rgba(0,0,0,.12);pointer-events:auto;text-align:center}
+  #title span{color:var(--gold-d)}
+  #parts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+  .pbtn{border:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:clamp(13px,1.6vw,16px);padding:8px 14px;border-radius:16px;background:#fff;color:var(--ink);box-shadow:0 4px 0 #d9c9ad;transition:transform .15s,background .2s}
+  .pbtn:hover{transform:translateY(-2px)}
+  .pbtn.active{background:var(--gold);color:#fff;box-shadow:0 4px 0 var(--gold-d)}
+  /* ---------- 3D labels ---------- */
+  .tag{position:fixed;left:0;top:0;z-index:3;transform:translate(-50%,-50%);background:rgba(255,255,255,.92);border:3px solid var(--gold);color:var(--ink);font-weight:900;font-size:14px;padding:4px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:font-size .3s,background .3s,opacity .3s;box-shadow:0 4px 12px rgba(0,0,0,.15);user-select:none}
+  .tag.active{background:var(--gold);color:#fff;font-size:18px;border-color:#fff}
+  .tag.hidden{opacity:0;pointer-events:none}
+  /* ---------- info card ---------- */
+  #card{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:min(94vw,820px);background:var(--card);border-radius:26px;padding:16px 22px 14px;z-index:5;box-shadow:0 8px 0 #e7d6b8,0 16px 40px rgba(0,0,0,.18);max-height:38vh;overflow:auto}
+  #cardHead{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  #badge{background:var(--blue);color:#fff;font-weight:900;border-radius:12px;padding:3px 10px;font-size:14px;flex:none}
+  #stepTitle{font-size:clamp(20px,3vw,28px);font-weight:900;margin:0}
+  #stepText{font-size:clamp(16px,2.1vw,20px);line-height:1.55;font-weight:600;margin:0}
+  #stepText .s{border-radius:8px;padding:1px 2px;transition:background .3s}
+  #stepText .s.now{background:#ffe39a}
+  #progress{height:8px;background:#f0e4cf;border-radius:8px;margin-top:10px;overflow:hidden}
+  #progress div{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#ffcf6b);transition:width .4s}
+  /* ---------- controls ---------- */
+  #controls{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);display:flex;gap:10px;z-index:6;flex-wrap:wrap;justify-content:center;width:min(98vw,1180px)}
+  .btn{border:none;cursor:pointer;font-family:inherit;font-weight:900;font-size:clamp(14px,1.9vw,18px);padding:12px 18px;border-radius:18px;color:#fff;transition:transform .12s,filter .2s;min-height:52px}
+  .btn:active{transform:translateY(3px)}
+  .btn:hover{filter:brightness(1.06)}
+  .b-play{background:var(--green);box-shadow:0 5px 0 #2a8a5f}
+  .b-nav{background:var(--blue);box-shadow:0 5px 0 #2466ad}
+  .b-re{background:#9b6ad6;box-shadow:0 5px 0 #6f45a6}
+  .b-snd{background:var(--gold);box-shadow:0 5px 0 var(--gold-d)}
+  .b-snd.off,.b-play.off{background:#a9a39a;box-shadow:0 5px 0 #7e7870}
+  /* ---------- sound panel ---------- */
+  #panelBtn{position:fixed;top:14px;right:14px;z-index:7}
+  #panel{position:fixed;top:78px;right:14px;width:min(92vw,330px);background:var(--card);border-radius:22px;padding:16px;z-index:7;box-shadow:0 8px 0 #e7d6b8,0 14px 34px rgba(0,0,0,.2);display:none;max-height:calc(100vh - 200px);overflow:auto}
+  #panel.open{display:block}
+  #panel h3{margin:0 0 10px;font-size:19px}
+  .row{margin:12px 0}
+  .row label{display:block;font-weight:800;font-size:15px;margin-bottom:5px}
+  .row input[type=range]{width:100%;accent-color:var(--gold-d);height:26px}
+  .row input[type=file]{width:100%;font-family:inherit;font-size:13px}
+  .hint{font-size:12.5px;color:#7a6650;font-weight:600;line-height:1.35}
+  .toggle{display:flex;gap:8px}
+  .toggle .btn{flex:1;font-size:15px;padding:10px;min-height:44px}
+  #voiceInfo{background:#fff3d6;border-radius:12px;padding:8px 10px}
+  /* ---------- splash ---------- */
+  #splash{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(191,230,255,.55);backdrop-filter:blur(3px)}
+  #splashBox{background:var(--card);border-radius:32px;padding:28px 30px;text-align:center;max-width:min(92vw,560px);box-shadow:0 10px 0 #e7d6b8,0 20px 50px rgba(0,0,0,.2)}
+  #splashBox h1{margin:0 0 8px;font-size:clamp(26px,4.4vw,40px);font-weight:900}
+  #splashBox h1 span{color:var(--gold-d)}
+  #splashBox p{font-size:18px;font-weight:600;margin:0 0 20px;line-height:1.45}
+  #splashBox .btn{font-size:22px;padding:16px 30px}
+  #splashBox .btn + .btn{margin-left:8px}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;z-index:30;background:var(--sky1)}
+  #help{position:fixed;left:14px;top:14px;z-index:4;background:rgba(255,255,255,.85);border-radius:14px;padding:6px 12px;font-size:13px;font-weight:700;max-width:220px}
+  @media (max-width:700px){
+    #card{bottom:150px;padding:12px 14px;max-height:30vh}
+    #help{display:none}
+    .tag{font-size:12px}
+    .tag.active{font-size:15px}
+    .btn{padding:10px 12px}
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<div id="loading">⏳ Жүктелуде...</div>
+<canvas id="scene"></canvas>
+
+<div id="topbar">
+  <div id="title">🐎 <span>Қамшы</span> — қазақтың ұлттық бұйымы</div>
+  <div id="parts"></div>
+</div>
+<div id="help">🖱️ Тінтуірмен бұра аласың, дөңгелегімен жақындат. Бөлікті бас — ол туралы білесің!</div>
+
+<button id="panelBtn" class="btn b-snd" title="Дыбыс баптаулары">🎵 Дыбыс</button>
+<div id="panel">
+  <h3>🎵 Дыбыс баптаулары</h3>
+  <div class="row">
+    <label>🗣️ Диктор дауысы</label>
+    <div class="toggle"><button id="voiceBtn2" class="btn b-snd">🔊 Қосулы</button></div>
+    <div id="voiceInfo" class="hint" style="margin-top:8px">Дауыс іздеуде...</div>
+  </div>
+  <div class="row">
+    <label for="voiceVol">Диктор деңгейі: <span id="voiceVolV">100</span>%</label>
+    <input id="voiceVol" type="range" min="0" max="100" value="100">
+  </div>
+  <div class="row">
+    <label for="rate">Оқу жылдамдығы: <span id="rateV">0.85</span></label>
+    <input id="rate" type="range" min="0.5" max="1.2" step="0.05" value="0.85">
+  </div>
+  <div class="row">
+    <label>🎶 Фондық күй</label>
+    <div class="toggle">
+      <button id="musicBtn2" class="btn b-snd off">🎶 Өшірулі</button>
+    </div>
+  </div>
+  <div class="row">
+    <label for="musicVol">Күй деңгейі: <span id="musicVolV">45</span>%</label>
+    <input id="musicVol" type="range" min="0" max="100" value="45">
+  </div>
+  <hr style="border:none;border-top:2px dashed #e7d6b8">
+  <div class="row">
+    <label>📂 Дайын диктор файлдары (MP3/WAV)</label>
+    <input id="narrFiles" type="file" accept="audio/*" multiple>
+    <div class="hint">Әр кезеңге бір файл, ретімен таңда: 1 — Кіріспе, 2 — Сабы, 3 — Алақаны, 4 — Өрімі, 5 — Бүлдіргесі. Файл бар кезеңде компьютер дауысының орнына сол ойнайды.</div>
+    <div id="narrList" class="hint"></div>
+  </div>
+  <div class="row">
+    <label>📂 Өз күйіңді қос (MP3/WAV)</label>
+    <input id="musicFile" type="file" accept="audio/*">
+    <div class="hint">Таңдалған күй синтезделген әуеннің орнына қайталанып ойнайды. Деңгейі «Күй деңгейі» арқылы реттеледі.</div>
+    <div id="musicName" class="hint"></div>
+  </div>
+</div>
+
+<div id="card">
+  <div id="cardHead"><span id="badge">1 / 5</span><h2 id="stepTitle"></h2></div>
+  <p id="stepText"></p>
+  <div id="progress"><div></div></div>
+</div>
+
+<div id="controls">
+  <button id="prevBtn" class="btn b-nav">⬅️ Алдыңғы</button>
+  <button id="playBtn" class="btn b-play">▶️ Таныстыруды бастау</button>
+  <button id="nextBtn" class="btn b-nav">Келесі ➡️</button>
+  <button id="restartBtn" class="btn b-re">🔄 Қайта бастау</button>
+  <button id="voiceBtn" class="btn b-snd">🔊 Дауыс</button>
+  <button id="musicBtn" class="btn b-snd off">🎶 Күй</button>
+</div>
+
+<div id="splash">
+  <div id="splashBox">
+    <h1>Сәлем, досым! 👋<br><span>Қамшы</span> әлеміне қош келдің!</h1>
+    <p>Бүгін біз қазақтың ұлттық бұйымы — қамшының қалай жасалғанын бірге көреміз. Дыбысты қосып қой! 🔊</p>
+    <button id="startBtn" class="btn b-play">▶️ Таныстыруды бастау</button>
+    <button id="freeBtn" class="btn b-nav">🖐️ Өзім қараймын</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* =========================================================
+   1. КЕЗЕҢДЕР (мәтін + камера)
+   ========================================================= */
+const STEPS = [
+  { key:'intro', btn:'🌍 Жалпы', title:'🐎 Қамшымен танысайық!',
+    text:'Сәлеметсіңдер ме, балалар! Бұл — қамшы, қазақтың ұлттық бұйымы. Ерте заманда атқа мінген әр жігіттің қолында қамшысы болған. Қамшы — жолаушының серігі, шебердің өнері. Ендеше оның бөліктерін бірге қарап шығайық!',
+    cam:[1.4,3.1,9.4], tgt:[1.4,0.9,0] },
+  { key:'sap', btn:'🪵 Сабы', title:'🪵 Сабы — қолға ұстайтын бөлігі',
+    text:'Мына берік бөлік — қамшының сабы. Біз оны қолымызбен ұстаймыз. Шеберлер сапты тобылғыдан, қайыңнан, кейде сүйек пен мүйізден жасаған. Сапқа әдемі ою-өрнек салып, күміс сақиналармен әшекейлеген. Сабы мықты болса, қамшы ұзақ қызмет етеді.',
+    cam:[-1.4,2.3,4.6], tgt:[-1.5,0.95,0] },
+  { key:'alaqan', btn:'🤎 Алақаны', title:'🤎 Алақаны — жалғап тұратын бөлігі',
+    text:'Ал мынау — қамшының алақаны. Ол сап пен өрімді бір-біріне берік жалғап тұрады. Алақанды жұмсақ былғарымен орап, жез сақинамен бекітеді. Кішкентай шашақтар қамшыға ерекше сән береді.',
+    cam:[1.0,1.6,3.0], tgt:[0.45,0.9,0] },
+  { key:'orim', btn:'🪢 Өрімі', title:'🪢 Өрімі — былғарыдан өрілген бөлігі',
+    text:'Енді өрімін көрейік! Өрім жіңішке былғары таспалардан өріледі. Шебер таспаларды қыздардың шашын өргендей бір-біріне айқастырып өреді. Таспа саны төрт, сегіз, тіпті он екі болуы мүмкін. Таспасы көп болған сайын қамшы әдемі әрі берік болады. Өрімнің ұшы тарқатылып кетпеуі үшін мықтап бекітіледі.',
+    cam:[4.4,3.4,5.6], tgt:[4.1,0.9,0.1] },
+  { key:'buldirge', btn:'➰ Бүлдіргесі', title:'➰ Бүлдіргесі және қамшыны құрметтеу',
+    text:'Саптың басындағы мына ілмек — бүлдірге. Оны білекке іліп жүреді, сонда қамшы қолдан түсіп қалмайды. Қазақ халқы қамшыны қатты құрметтеген. Қамшыны табалдырыққа тастамайды және оның үстінен аттамайды. Үйге кіргенде қамшыны есіктің жанына немесе керегенің басына іліп қояды. Ертеде қамшыны бесіктің басына іліп, балаға қорған болсын деп ырым еткен. Қамшыны құрметтеу — ата-баба дәстүрін құрметтеу деген сөз!',
+    cam:[-4.8,1.9,4.0], tgt:[-3.3,0.55,0.1] },
+];
+
+/* =========================================================
+   2. THREE.JS САХНАСЫ
+   ========================================================= */
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.05, 200);
+camera.position.set(...STEPS[0].cam);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(...STEPS[0].tgt);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.2;
+controls.maxDistance = 22;
+controls.maxPolarAngle = Math.PI*0.49;
+controls.autoRotateSpeed = 0.6;
+
+// жарық
+scene.add(new THREE.HemisphereLight(0xfff6e5, 0x9cc7e8, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
+sun.position.set(4, 10, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-9, right:9, top:9, bottom:-9, near:1, far:30 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+const rim = new THREE.DirectionalLight(0xbfe0ff, 0.9);
+rim.position.set(-6, 4, -6);
+scene.add(rim);
+
+/* ---------- текстуралар (canvas арқылы) ---------- */
+function canvasTex(w, h, draw, repeat=[1,1]){
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(...repeat);
+  t.anisotropy = 8;
+  return t;
+}
+const woodTex = canvasTex(512, 512, (g,w,h)=>{
+  g.fillStyle='#9a5b2c'; g.fillRect(0,0,w,h);
+  for(let i=0;i<140;i++){
+    const x=Math.random()*w, a=0.05+Math.random()*0.18;
+    g.strokeStyle=`rgba(${Math.random()<.5?'60,28,10':'200,140,80'},${a})`;
+    g.lineWidth=1+Math.random()*4;
+    g.beginPath(); g.moveTo(x,0);
+    for(let y=0;y<=h;y+=16) g.lineTo(x+Math.sin(y*0.02+i)*6, y);
+    g.stroke();
+  }
+}, [2,1]);
+const leatherTex = canvasTex(256, 256, (g,w,h)=>{
+  g.fillStyle='#5a3220'; g.fillRect(0,0,w,h);
+  for(let i=0;i<5000;i++){
+    const v=Math.random(); g.fillStyle=`rgba(${v<.5?'30,15,8':'130,80,50'},${0.08+Math.random()*0.12})`;
+    g.fillRect(Math.random()*w, Math.random()*h, 2, 2);
+  }
+}, [3,3]);
+
+// ою-өрнекті тұғыр (қошқар мүйіз мотиві)
+const rugTex = canvasTex(1024, 1024, (g,w,h)=>{
+  const cx=w/2, cy=h/2;
+  g.fillStyle='#c0392b'; g.beginPath(); g.arc(cx,cy,w/2,0,7); g.fill();
+  g.fillStyle='#f6d58a'; g.beginPath(); g.arc(cx,cy,w/2-28,0,7); g.fill();
+  g.fillStyle='#2f6fb3'; g.beginPath(); g.arc(cx,cy,w/2-60,0,7); g.fill();
+  g.fillStyle='#fff3dc'; g.beginPath(); g.arc(cx,cy,w/2-150,0,7); g.fill();
+  const horn=(x,y,ang,s,col)=>{
+    g.save(); g.translate(x,y); g.rotate(ang); g.scale(s,s);
+    g.strokeStyle=col; g.lineWidth=9; g.lineCap='round';
+    for(const m of [1,-1]){
+      g.beginPath(); g.moveTo(0,10);
+      g.bezierCurveTo(0,-20, m*30,-34, m*36,-14);
+      g.bezierCurveTo(m*40,0, m*24,4, m*22,-8);
+      g.stroke();
+    }
+    g.beginPath(); g.moveTo(0,10); g.lineTo(0,30); g.stroke();
+    g.restore();
+  };
+  const n=18;
+  for(let i=0;i<n;i++){
+    const a=i/n*Math.PI*2, r=w/2-105;
+    horn(cx+Math.cos(a)*r, cy+Math.sin(a)*r, a+Math.PI/2, 1.05, '#f6d58a');
+  }
+  for(let i=0;i<8;i++){
+    const a=i/8*Math.PI*2, r=170;
+    horn(cx+Math.cos(a)*r, cy+Math.sin(a)*r, a+Math.PI/2, 1.4, '#e0a43a');
+  }
+  horn(cx,cy+20,0,2.2,'#c0392b');
+});
+rugTex.wrapS = rugTex.wrapT = THREE.ClampToEdgeWrapping;
+const rug = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 7.4, 0.25, 96),
+  [new THREE.MeshStandardMaterial({color:0xa83226, roughness:.9}),
+   new THREE.MeshStandardMaterial({map:rugTex, roughness:.95}),
+   new THREE.MeshStandardMaterial({color:0xa83226})]);
+rug.position.set(1.6,-0.15,0);
+rug.receiveShadow = true;
+scene.add(rug);
+
+/* =========================================================
+   3. ҚАМШЫ МОДЕЛІ
+   ========================================================= */
+const whip = new THREE.Group();
+whip.position.y = 1.0;
+scene.add(whip);
+const PART = {}; // key -> {group, mats:[]}
+function partGroup(key){
+  const g = new THREE.Group(); g.userData.part = key;
+  PART[key] = { group:g, mats:[] };
+  whip.add(g); return g;
+}
+function mat(key, opts){
+  const m = new THREE.MeshStandardMaterial(opts);
+  m.emissive = new THREE.Color(0xffb02e); m.emissiveIntensity = 0;
+  PART[key].mats.push(m); return m;
+}
+function addMesh(key, geo, material){
+  const m = new THREE.Mesh(geo, material);
+  m.castShadow = true; m.receiveShadow = true; m.userData.part = key;
+  PART[key].group.add(m); return m;
+}
+
+// Айнымалы радиусты түтік (parallel transport frames)
+function taperTube(points, radiusFn, radial=10){
+  const n = points.length;
+  const T=[], N=[], B=[];
+  for(let i=0;i<n;i++){
+    const a=points[Math.max(0,i-1)], b=points[Math.min(n-1,i+1)];
+    T.push(new THREE.Vector3().subVectors(b,a).normalize());
+  }
+  let nrm = new THREE.Vector3(0,1,0);
+  if(Math.abs(T[0].dot(nrm))>0.9) nrm.set(0,0,1);
+  nrm = new THREE.Vector3().crossVectors(T[0], nrm).cross(T[0]).normalize().negate();
+  for(let i=0;i<n;i++){
+    if(i>0){
+      const axis = new THREE.Vector3().crossVectors(T[i-1], T[i]);
+      const l = axis.length();
+      if(l>1e-6){ axis.divideScalar(l); nrm.applyAxisAngle(axis, Math.acos(THREE.MathUtils.clamp(T[i-1].dot(T[i]),-1,1))); }
+    }
+    N.push(nrm.clone()); B.push(new THREE.Vector3().crossVectors(T[i], nrm).normalize());
+  }
+  const pos=[], nor=[], uv=[], idx=[];
+  for(let i=0;i<n;i++){
+    const r = radiusFn(i/(n-1));
+    for(let j=0;j<=radial;j++){
+      const a=j/radial*Math.PI*2, c=Math.cos(a), s=Math.sin(a);
+      const d = new THREE.Vector3().addScaledVector(N[i],c).addScaledVector(B[i],s);
+      pos.push(points[i].x+d.x*r, points[i].y+d.y*r, points[i].z+d.z*r);
+      nor.push(d.x,d.y,d.z); uv.push(i/(n-1)*8, j/radial);
+    }
+  }
+  for(let i=0;i<n-1;i++) for(let j=0;j<radial;j++){
+    const a=i*(radial+1)+j, b=a+radial+1;
+    idx.push(a,b,a+1, b,b+1,a+1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor,3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv,2));
+  geo.setIndex(idx);
+  return { geo, T, N, B };
+}
+function capSphere(key, p, r, material){
+  const s = addMesh(key, new THREE.SphereGeometry(r, 16, 12), material);
+  s.position.copy(p); return s;
+}
+
+/* ---- 3.1 САП ---- */
+{
+  partGroup('sap');
+  const wood = mat('sap', { map:woodTex, color:0xffffff, roughness:.55, metalness:.0 });
+  const silver = mat('sap', { color:0xe8e8ef, roughness:.25, metalness:.9 });
+  // профиль: y осі бойымен 0 (басы) -> 3 (алақанға қарай)
+  const prof = [
+    [0.0,0.0],[0.16,0.02],[0.25,0.1],[0.27,0.22],[0.22,0.34],[0.2,0.42],
+    [0.215,0.9],[0.23,1.5],[0.215,2.1],[0.19,2.6],[0.175,2.95],[0.17,3.0]
+  ].map(([r,y])=>new THREE.Vector2(r,y));
+  const lathe = new THREE.LatheGeometry(prof, 48);
+  lathe.rotateZ(-Math.PI/2);          // y -> x
+  lathe.translate(-3.0, 0, 0);        // x: -3..0
+  addMesh('sap', lathe, wood);
+  // күміс сақиналар
+  for(const [x,r] of [[-2.6,0.205],[-1.9,0.222],[-1.0,0.232],[-0.35,0.185]]){
+    const t = addMesh('sap', new THREE.TorusGeometry(r,0.03,12,48), silver);
+    t.rotation.y = Math.PI/2; t.position.x = x;
+  }
+  // ою-тақталар (кішкене күміс шегелер)
+  for(let i=0;i<6;i++){
+    const a=i/6*Math.PI*2;
+    const s = addMesh('sap', new THREE.SphereGeometry(0.035,12,8), silver);
+    s.position.set(-1.45, Math.cos(a)*0.232, Math.sin(a)*0.232);
+  }
+  // басындағы күміс қақпақ
+  const knob = addMesh('sap', new THREE.SphereGeometry(0.09,16,12), silver);
+  knob.position.set(-3.02,0,0);
+}
+
+/* ---- 3.2 АЛАҚАН ---- */
+{
+  partGroup('alaqan');
+  const leather = mat('alaqan', { map:leatherTex, color:0xb57a55, roughness:.75 });
+  const brass = mat('alaqan', { color:0xe0b04a, roughness:.3, metalness:.85 });
+  const prof = [[0.175,0],[0.19,0.05],[0.18,0.3],[0.15,0.6],[0.12,0.85],[0.11,0.92]]
+    .map(([r,y])=>new THREE.Vector2(r,y));
+  const g = new THREE.LatheGeometry(prof, 40);
+  g.rotateZ(-Math.PI/2);
+  addMesh('alaqan', g, leather);
+  // былғары орам жолақтары
+  for(let i=0;i<6;i++){
+    const x=0.12+i*0.12, r=0.185-i*0.012;
+    const t = addMesh('alaqan', new THREE.TorusGeometry(r,0.018,8,40), leather);
+    t.rotation.y=Math.PI/2; t.position.x=x;
+  }
+  // жез сақина
+  const ring = addMesh('alaqan', new THREE.CylinderGeometry(0.205,0.205,0.12,40,1,true), brass);
+  ring.rotation.z=Math.PI/2; ring.position.x=0.02;
+  for(const x of [-0.04,0.08]){
+    const t=addMesh('alaqan', new THREE.TorusGeometry(0.205,0.02,10,40), brass);
+    t.rotation.y=Math.PI/2; t.position.x=x;
+  }
+  // шашақтар
+  const tasselMat = mat('alaqan', { map:leatherTex, color:0x8a5636, roughness:.8, side:THREE.DoubleSide });
+  for(let i=0;i<9;i++){
+    const len = 0.55+Math.random()*0.25;
+    const strip = new THREE.BoxGeometry(0.035, len, 0.012);
+    strip.translate(0,-len/2,0);
+    const m = addMesh('alaqan', strip, tasselMat);
+    const a = (i/9)*Math.PI - Math.PI/2;
+    m.position.set(0.62+Math.random()*0.08, -0.08, Math.sin(a)*0.1);
+    m.rotation.z = 0.35 + Math.random()*0.2;
+    m.rotation.x = Math.sin(a)*0.45;
+  }
+}
+
+/* ---- 3.3 ӨРІМ ---- */
+let lashCurve;
+{
+  partGroup('orim');
+  lashCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0.85,0,0), new THREE.Vector3(1.8,-0.06,0.12),
+    new THREE.Vector3(3.0,-0.22,0.45), new THREE.Vector3(4.3,-0.25,0.42),
+    new THREE.Vector3(5.5,-0.1,0.05), new THREE.Vector3(6.5,0.05,-0.4),
+    new THREE.Vector3(7.3,0.08,-0.75)
+  ], false, 'catmullrom', 0.5);
+  const S = 700;
+  const base = lashCurve.getSpacedPoints(S);
+  const R = t => THREE.MathUtils.lerp(0.13, 0.045, Math.pow(t,0.9));
+  // өзек
+  const core = taperTube(base, t=>R(t)*0.72, 12);
+  addMesh('orim', core.geo, mat('orim',{ color:0x2e1a10, roughness:.9 }));
+  // 4 таспа (екі түсті)
+  const cols = [0x6a3a20, 0xd09a62, 0x6a3a20, 0xd09a62];
+  const turns = 34;
+  cols.forEach((col, k)=>{
+    const pts = base.map((p,i)=>{
+      const t=i/S, th = t*turns*Math.PI*2 + k*Math.PI/2;
+      const off = R(t)*0.55*(1+0.12*Math.sin(th*2));
+      return p.clone().addScaledVector(core.N[i], Math.cos(th)*off).addScaledVector(core.B[i], Math.sin(th)*off);
+    });
+    const strand = taperTube(pts, t=>R(t)*0.5, 8);
+    addMesh('orim', strand.geo, mat('orim',{ map:leatherTex, color:col, roughness:.6 }));
+  });
+  // өрім басталатын түйін
+  const knotMat = mat('orim',{ map:leatherTex, color:0x6b3a22, roughness:.7 });
+  capSphere('orim', base[0].clone().add(new THREE.Vector3(0.02,0,0)), 0.12, knotMat);
+  // ұшы: түйін + кішкене шашақ
+  const end = base[S], dir = core.T[S];
+  const tip = capSphere('orim', end, 0.055, knotMat);
+  for(let i=0;i<5;i++){
+    const len = 0.28+Math.random()*0.1;
+    const g = new THREE.CylinderGeometry(0.012,0.006,len,6); g.translate(0,len/2,0);
+    const m = addMesh('orim', g, knotMat);
+    m.position.copy(end);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().add(new THREE.Vector3((Math.random()-.5)*.5,(Math.random()-.5)*.5,(Math.random()-.5)*.5)).normalize());
+  }
+}
+
+/* ---- 3.4 БҮЛДІРГЕ ---- */
+{
+  partGroup('buldirge');
+  const strap = mat('buldirge', { map:leatherTex, color:0x9a5a38, roughness:.7 });
+  // сапты орап тұрған белдік
+  const band = addMesh('buldirge', new THREE.TorusGeometry(0.245,0.045,12,40), strap);
+  band.rotation.y=Math.PI/2; band.position.x=-2.82;
+  // ілмек
+  const loop = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-2.82,0.2,0.12), new THREE.Vector3(-3.15,0.12,0.32),
+    new THREE.Vector3(-3.55,-0.2,0.42), new THREE.Vector3(-3.85,-0.62,0.28),
+    new THREE.Vector3(-3.92,-0.82,0.0), new THREE.Vector3(-3.8,-0.65,-0.28),
+    new THREE.Vector3(-3.5,-0.2,-0.4), new THREE.Vector3(-3.12,0.12,-0.3),
+    new THREE.Vector3(-2.82,0.2,-0.12)
+  ]);
+  const lt = taperTube(loop.getSpacedPoints(160), ()=>0.045, 10);
+  addMesh('buldirge', lt.geo, strap);
+  // ілмектің түйіні мен шашағы
+  capSphere('buldirge', new THREE.Vector3(-2.86,0.24,0), 0.08, strap);
+  const bead = capSphere('buldirge', new THREE.Vector3(-3.68,-0.42,0.38), 0.075, strap);
+  bead.scale.set(1,1.3,1);
+  for(let i=0;i<6;i++){
+    const len=0.25+Math.random()*0.08;
+    const g=new THREE.BoxGeometry(0.025,len,0.01); g.translate(0,-len/2,0);
+    const m=addMesh('buldirge', g, strap);
+    m.position.set(-3.68,-0.48,0.38);
+    m.rotation.z=(i-2.5)*0.12; m.rotation.x=(Math.random()-.5)*.4;
+  }
+}
+
+// жапсырма нүктелері (whip-локал координаттары)
+const ANCHORS = {
+  sap: new THREE.Vector3(-1.6,0.55,0),
+  alaqan: new THREE.Vector3(0.45,0.38,0),
+  orim: lashCurve.getPointAt(0.42).add(new THREE.Vector3(0,0.45,0)),
+  buldirge: new THREE.Vector3(-3.95,-0.95,0.3),
+};
+const PART_TO_STEP = { sap:1, alaqan:2, orim:3, buldirge:4 };
+
+/* =========================================================
+   4. UI
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const partsBar = $('parts');
+STEPS.forEach((s,i)=>{
+  const b=document.createElement('button'); b.className='pbtn'; b.textContent=s.btn;
+  b.onclick=()=>{ userGo(i); }; partsBar.appendChild(b);
+});
+const tags = {};
+for(const key of Object.keys(ANCHORS)){
+  const d=document.createElement('div'); d.className='tag';
+  d.textContent = { sap:'Сабы', alaqan:'Алақаны', orim:'Өрімі', buldirge:'Бүлдіргесі' }[key];
+  d.onclick=()=>userGo(PART_TO_STEP[key]);
+  document.body.appendChild(d); tags[key]=d;
+}
+
+let current = 0;
+let playing = false;
+let voiceOn = true;
+let musicOn = false;
+
+function renderCard(i){
+  const s = STEPS[i];
+  $('badge').textContent = `${i+1} / ${STEPS.length}`;
+  $('stepTitle').textContent = s.title;
+  const sentences = splitSentences(s.text);
+  $('stepText').innerHTML = sentences.map((t,k)=>`<span class="s" data-k="${k}">${t}</span>`).join(' ');
+  [...partsBar.children].forEach((b,k)=>b.classList.toggle('active', k===i));
+  $('progress').firstElementChild.style.width = '0%';
+}
+function splitSentences(t){ return t.match(/[^.!?]+[.!?]+/g)?.map(x=>x.trim()) ?? [t]; }
+function markSentence(k, total){
+  document.querySelectorAll('#stepText .s').forEach(el=>el.classList.toggle('now', +el.dataset.k===k));
+  $('progress').firstElementChild.style.width = total ? `${Math.round((k+1)/total*100)}%` : '100%';
+}
+
+/* =========================================================
+   5. КАМЕРА ТУРЫ
+   ========================================================= */
+let fly = null;
+const ease = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+function flyTo(i){
+  const s=STEPS[i];
+  fly = { t:0, dur:2.4,
+    p0:camera.position.clone(), p1:new THREE.Vector3(...s.cam),
+    q0:controls.target.clone(), q1:new THREE.Vector3(...s.tgt) };
+  fly.p1.y += whip.position.y-1.0; fly.q1.y += whip.position.y-1.0;
+  controls.autoRotate = false;
+}
+function goTo(i){
+  current = (i+STEPS.length)%STEPS.length;
+  renderCard(current);
+  flyTo(current);
+  narrate(current);
+}
+function userGo(i){ goTo(i); }
+
+/* =========================================================
+   6. ДИКТОР (Web Speech API + жүктелген файлдар)
+   ========================================================= */
+let ttsVoice = null, ttsLang = 'kk-KZ', voiceMode = 'none';
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  const by = p => vs.find(v=>v.lang && v.lang.toLowerCase().replace('_','-').startsWith(p));
+  let v = by('kk'), info;
+  if(v){ voiceMode='kk'; ttsLang=v.lang; info=`✅ Қазақ дауысы табылды: <b>${v.name}</b>`; }
+  else if((v = by('ru'))){ voiceMode='fallback'; ttsLang=v.lang; info=`ℹ️ Қазақ дауысы табылмады. Мәтін <b>${v.name}</b> дауысымен баяу әрі анық оқылады. Нақты қазақша дауыс үшін дайын MP3 файл жүктеуге болады.`; }
+  else if((v = by('tr'))){ voiceMode='fallback'; ttsLang=v.lang; info=`ℹ️ Қазақ дауысы жоқ, <b>${v.name}</b> баяу оқиды.`; }
+  else if(vs.length){ v = vs.find(x=>x.default)||vs[0]; voiceMode='fallback'; ttsLang=v.lang; info=`ℹ️ Қазақ дауысы жоқ, әдепкі дауыс баяу оқиды.`; }
+  else { voiceMode='none'; info='⚠️ Браузерде дауыс табылмады. Мәтінді экраннан оқы немесе MP3 файл жүкте.'; }
+  ttsVoice = v || null;
+  $('voiceInfo').innerHTML = info;
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+} else {
+  $('voiceInfo').innerHTML = '⚠️ Бұл браузер дауыстап оқуды қолдамайды. MP3 файл жүктеуге болады.';
+}
+
+const narrFiles = [];               // step index -> objectURL
+const narrAudio = new Audio();
+let narrToken = 0;
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+function speakOne(text, token){
+  return new Promise(res=>{
+    if(!('speechSynthesis' in window) || voiceMode==='none'){ res(false); return; }
+    const u = new SpeechSynthesisUtterance(text);
+    if(ttsVoice) u.voice = ttsVoice;
+    u.lang = ttsLang;
+    const base = +$('rate').value;
+    u.rate = voiceMode==='kk' ? base : Math.max(0.5, base-0.1);
+    u.pitch = voiceMode==='kk' ? 1.05 : 1.0;
+    u.volume = +$('voiceVol').value/100;
+    let done=false; const fin=ok=>{ if(!done){done=true;res(ok);} };
+    u.onend=()=>fin(true); u.onerror=()=>fin(false);
+    // қауіпсіздік таймері (кейбір браузерлерде onend келмейді)
+    setTimeout(()=>fin(true), 2500 + text.length*140/u.rate);
+    speechSynthesis.speak(u);
+  });
+}
+function stopVoice(){
+  narrToken++;
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  narrAudio.pause();
+  duck(false);
+}
+async function narrate(i){
+  stopVoice();
+  const token = narrToken;
+  const sentences = splitSentences(STEPS[i].text);
+  await sleep(500);
+  if(token!==narrToken) return;
+  duck(true);
+  if(voiceOn && narrFiles[i]){
+    markSentence(-1, 0);
+    narrAudio.src = narrFiles[i];
+    narrAudio.volume = +$('voiceVol').value/100;
+    try{ await narrAudio.play(); }catch(e){}
+    await new Promise(r=>{ narrAudio.onended=r; narrAudio.onerror=r; narrAudio.onpause=r; });
+  } else {
+    for(let k=0;k<sentences.length;k++){
+      if(token!==narrToken) return;
+      markSentence(k, sentences.length);
+      let spoken=false;
+      if(voiceOn) spoken = await speakOne(sentences[k], token);
+      if(!spoken && token===narrToken) await sleep(1800 + sentences[k].length*55);
+      await sleep(250);
+    }
+  }
+  if(token!==narrToken) return;
+  duck(false);
+  markSentence(-1, 0);
+  $('progress').firstElementChild.style.width='100%';
+  if(playing){
+    await sleep(1600);
+    if(token!==narrToken || !playing) return;
+    if(current < STEPS.length-1) goTo(current+1);
+    else { setPlaying(false); flyTo(0); setTimeout(()=>{ if(!playing && !fly) controls.autoRotate=true; }, 2600); }
+  }
+}
+
+/* =========================================================
+   7. ФОНДЫҚ КҮЙ (Web Audio API синтезі)
+   ========================================================= */
+let actx=null, musicGain, duckGain, synthBus, uploadedMusic=null, uploadedNode=null;
+function audioInit(){
+  if(actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  musicGain = actx.createGain(); musicGain.gain.value = +$('musicVol').value/100*0.9;
+  duckGain = actx.createGain(); duckGain.gain.value = 1;
+  musicGain.connect(duckGain).connect(actx.destination);
+  synthBus = actx.createGain(); synthBus.gain.value = 0;
+  // жұмсақ эхо
+  const dly = actx.createDelay(1); dly.delayTime.value = 0.357*1.5;
+  const fb = actx.createGain(); fb.gain.value = 0.28;
+  const lp = actx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800;
+  const wet = actx.createGain(); wet.gain.value = 0.3;
+  synthBus.connect(musicGain);
+  synthBus.connect(dly); dly.connect(lp).connect(fb).connect(dly); lp.connect(wet).connect(musicGain);
+}
+function duck(on){
+  if(!actx) return;
+  const t=actx.currentTime;
+  duckGain.gain.cancelScheduledValues(t);
+  duckGain.gain.setTargetAtTime(on?0.45:1, t, 0.4);
+}
+// домбыраға ұқсас шертпе дыбыс
+function pluck(freq, time, vel=0.3, decay=1.2, bright=2600){
+  const o1=actx.createOscillator(), o2=actx.createOscillator(), g=actx.createGain(), f=actx.createBiquadFilter();
+  o1.type='triangle'; o1.frequency.value=freq;
+  o2.type='sine'; o2.frequency.value=freq*2.005;
+  const g2=actx.createGain(); g2.gain.value=0.35;
+  f.type='lowpass'; f.Q.value=1.5;
+  f.frequency.setValueAtTime(bright, time); f.frequency.exponentialRampToValueAtTime(500, time+decay*0.7);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(vel, time+0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, time+decay);
+  o1.connect(f); o2.connect(g2).connect(f); f.connect(g).connect(synthBus);
+  o1.start(time); o2.start(time); o1.stop(time+decay+0.05); o2.stop(time+decay+0.05);
+}
+const D4 = 293.66, D3 = 146.83;
+const SCALE = [0,2,3,5,7,9,10,12,14,15,17]; // D дориан
+const MEL = [
+  [4,2],[3,1],[2,1],[1,2],[0,2],[1,1],[2,1],[4,2],[3,4],
+  [4,2],[5,1],[4,1],[3,2],[2,2],[1,1],[2,1],[1,2],[0,4],
+  [2,2],[4,1],[5,1],[7,2],[5,2],[4,1],[5,1],[4,2],[3,4],
+  [4,2],[3,1],[2,1],[1,2],[2,2],[1,1],[0,1],[0,2],[0,4]
+];
+const CHORDS = [0,0,-2,0,3,-2,0,0]; // әр такт түбірі (жарты тон)
+const EIGHTH = 60/84/2, LOOP = 64;
+const EVENTS = (()=>{
+  const ev=[]; let t=0;
+  for(const [deg,len] of MEL){ ev.push({t, type:'mel', f:D4*Math.pow(2,SCALE[deg]/12), len}); t+=len; }
+  for(let bar=0; bar<8; bar++){
+    const root = D3*Math.pow(2,CHORDS[bar]/12);
+    for(let beat=0; beat<4; beat++){
+      const tt = bar*8 + beat*2;
+      ev.push({t:tt, type:'bass', f:root/2, v:beat%2?0.1:0.16});
+      ev.push({t:tt+0.67, type:'strum', f:root*1.5, v:0.06});
+      ev.push({t:tt+1.33, type:'strum', f:root, v:0.07});
+    }
+  }
+  return ev.sort((a,b)=>a.t-b.t);
+})();
+let schedTimer=null, loopStart=0, evIdx=0, padNodes=[];
+function scheduler(){
+  const ahead = actx.currentTime + 0.25;
+  while(true){
+    const e = EVENTS[evIdx];
+    const when = loopStart + e.t*EIGHTH;
+    if(when > ahead) break;
+    if(when > actx.currentTime-0.05){
+      if(e.type==='mel') pluck(e.f, when, 0.22, Math.min(2.2, 0.6+e.len*0.35), 3000);
+      else if(e.type==='bass') pluck(e.f, when, e.v, 1.1, 900);
+      else pluck(e.f, when, e.v, 0.5, 1600);
+    }
+    evIdx++;
+    if(evIdx>=EVENTS.length){ evIdx=0; loopStart += LOOP*EIGHTH; }
+  }
+}
+function startSynth(){
+  audioInit();
+  actx.resume();
+  const t=actx.currentTime;
+  synthBus.gain.cancelScheduledValues(t);
+  synthBus.gain.setTargetAtTime(1, t, 0.6);
+  // жайлы фон (бурдон)
+  for(const [f,v] of [[73.42,0.05],[110,0.03],[146.83,0.015]]){
+    const o=actx.createOscillator(), g=actx.createGain(), lfo=actx.createOscillator(), lg=actx.createGain();
+    o.type='sine'; o.frequency.value=f; g.gain.value=v;
+    lfo.frequency.value=0.15+Math.random()*0.1; lg.gain.value=v*0.5;
+    lfo.connect(lg).connect(g.gain);
+    o.connect(g).connect(synthBus); o.start(); lfo.start();
+    padNodes.push(o,lfo);
+  }
+  loopStart = t+0.15; evIdx=0;
+  schedTimer = setInterval(scheduler, 60);
+}
+function stopSynth(){
+  if(!actx) return;
+  clearInterval(schedTimer); schedTimer=null;
+  const t=actx.currentTime;
+  synthBus.gain.cancelScheduledValues(t);
+  synthBus.gain.setTargetAtTime(0, t, 0.3);
+  const nodes=padNodes; padNodes=[];
+  setTimeout(()=>nodes.forEach(n=>{try{n.stop()}catch(e){}}), 1500);
+}
+function setMusic(on){
+  musicOn = on;
+  for(const b of [$('musicBtn'),$('musicBtn2')]){
+    b.classList.toggle('off', !on);
+  }
+  $('musicBtn2').textContent = on ? '🎶 Қосулы' : '🎶 Өшірулі';
+  audioInit(); actx.resume();
+  if(uploadedMusic){
+    stopSynth();
+    if(on){ uploadedMusic.play().catch(()=>{}); } else uploadedMusic.pause();
+  } else {
+    on ? (schedTimer||startSynth()) : stopSynth();
+  }
+}
+
+/* =========================================================
+   8. БАТЫРМАЛАР
+   ========================================================= */
+function setPlaying(on){
+  playing = on;
+  const b=$('playBtn');
+  b.textContent = on ? '⏸️ Тоқтата тұру' : '▶️ Таныстыруды бастау';
+}
+function setVoice(on){
+  voiceOn = on;
+  $('voiceBtn').classList.toggle('off', !on);
+  $('voiceBtn').textContent = on ? '🔊 Дауыс' : '🔇 Дауыс';
+  $('voiceBtn2').classList.toggle('off', !on);
+  $('voiceBtn2').textContent = on ? '🔊 Қосулы' : '🔇 Өшірулі';
+  if(!on){ if('speechSynthesis' in window) speechSynthesis.cancel(); narrAudio.pause(); }
+}
+$('playBtn').onclick = ()=>{
+  audioInit(); actx.resume();
+  if(playing){ setPlaying(false); stopVoice(); markSentence(-1,0); }
+  else { setPlaying(true); goTo(current); }
+};
+$('nextBtn').onclick = ()=>goTo(Math.min(current+1, STEPS.length-1));
+$('prevBtn').onclick = ()=>goTo(Math.max(current-1, 0));
+$('restartBtn').onclick = ()=>{ setPlaying(true); goTo(0); };
+$('voiceBtn').onclick = $('voiceBtn2').onclick = ()=>setVoice(!voiceOn);
+$('musicBtn').onclick = $('musicBtn2').onclick = ()=>setMusic(!musicOn);
+$('panelBtn').onclick = ()=>$('panel').classList.toggle('open');
+$('voiceVol').oninput = e=>{ $('voiceVolV').textContent=e.target.value; narrAudio.volume=e.target.value/100; };
+$('rate').oninput = e=>{ $('rateV').textContent=(+e.target.value).toFixed(2); };
+$('musicVol').oninput = e=>{
+  $('musicVolV').textContent=e.target.value;
+  if(actx) musicGain.gain.setTargetAtTime(e.target.value/100*0.9, actx.currentTime, 0.05);
+};
+$('narrFiles').onchange = e=>{
+  narrFiles.length = 0;
+  const files=[...e.target.files].slice(0,STEPS.length);
+  files.forEach((f,k)=>narrFiles[k]=URL.createObjectURL(f));
+  $('narrList').innerHTML = files.map((f,k)=>`✅ ${k+1}. ${STEPS[k].btn} — ${f.name}`).join('<br>');
+};
+$('musicFile').onchange = e=>{
+  const f=e.target.files[0]; if(!f) return;
+  audioInit(); actx.resume();
+  if(!uploadedMusic){
+    uploadedMusic = new Audio(); uploadedMusic.loop = true;
+    uploadedNode = actx.createMediaElementSource(uploadedMusic);
+    uploadedNode.connect(musicGain);
+  }
+  uploadedMusic.src = URL.createObjectURL(f);
+  $('musicName').textContent = '✅ ' + f.name;
+  setMusic(true);
+};
+addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key==='ArrowRight') $('nextBtn').click();
+  if(e.key==='ArrowLeft') $('prevBtn').click();
+  if(e.key===' '){ e.preventDefault(); $('playBtn').click(); }
+});
+function closeSplash(){ $('splash').style.display='none'; }
+$('startBtn').onclick = ()=>{ closeSplash(); setMusic(true); setPlaying(true); goTo(0); };
+$('freeBtn').onclick = ()=>{ closeSplash(); audioInit(); renderCard(0); controls.autoRotate=true; };
+
+/* ---------- тінтуірмен бөлікті таңдау ---------- */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let downPos=null, hovered=null;
+function pickPart(ev){
+  mouse.set(ev.clientX/innerWidth*2-1, -(ev.clientY/innerHeight)*2+1);
+  ray.setFromCamera(mouse, camera);
+  const hit = ray.intersectObject(whip, true)[0];
+  return hit ? hit.object.userData.part : null;
+}
+canvas.addEventListener('pointerdown', e=>{ downPos=[e.clientX,e.clientY]; controls.autoRotate=false; fly=null; });
+canvas.addEventListener('pointermove', e=>{
+  hovered = pickPart(e);
+  canvas.style.cursor = hovered ? 'pointer' : 'grab';
+});
+canvas.addEventListener('pointerup', e=>{
+  if(!downPos) return;
+  const moved = Math.hypot(e.clientX-downPos[0], e.clientY-downPos[1]);
+  downPos=null;
+  if(moved<6){ const p=pickPart(e); if(p) userGo(PART_TO_STEP[p]); }
+});
+
+/* =========================================================
+   9. АНИМАЦИЯ ЦИКЛІ
+   ========================================================= */
+const clock = new THREE.Clock();
+const tmp = new THREE.Vector3();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  whip.position.y = 1.0 + Math.sin(t*1.1)*0.04;
+  whip.rotation.x = Math.sin(t*0.7)*0.02;
+
+  if(fly){
+    fly.t += dt/fly.dur;
+    const k = ease(Math.min(fly.t,1));
+    camera.position.lerpVectors(fly.p0, fly.p1, k);
+    camera.position.y += Math.sin(Math.PI*k)*0.8*(fly.p0.distanceTo(fly.p1)>3?1:0.3);
+    controls.target.lerpVectors(fly.q0, fly.q1, k);
+    if(fly.t>=1) fly=null;
+  }
+  controls.update();
+
+  // жарқырату
+  const activeKey = STEPS[current].key;
+  for(const [key,P] of Object.entries(PART)){
+    let target = 0;
+    if(key===activeKey) target = 0.16 + Math.sin(t*3)*0.1;
+    else if(key===hovered) target = 0.12;
+    for(const m of P.mats) m.emissiveIntensity += (target-m.emissiveIntensity)*0.15;
+  }
+  // жапсырмалар
+  for(const [key,el] of Object.entries(tags)){
+    tmp.copy(ANCHORS[key]); whip.localToWorld(tmp); tmp.project(camera);
+    const sy = (1-tmp.y)/2*innerHeight;
+    const vis = tmp.z<1 && Math.abs(tmp.x)<1.0 && sy>110 && sy<innerHeight-60;
+    el.classList.toggle('hidden', !vis);
+    el.classList.toggle('active', key===activeKey);
+    el.style.left = ((tmp.x+1)/2*innerWidth)+'px';
+    el.style.top = ((1-tmp.y)/2*innerHeight)+'px';
+  }
+  renderer.render(scene, camera);
+}
+function applyView(){
+  camera.aspect = innerWidth/innerHeight;
+  renderer.setSize(innerWidth, innerHeight);
+  // карта төменгі жақты жабады, сондықтан көріністі жоғары жылжытамыз
+  camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight*(innerWidth<700?0.2:0.15), innerWidth, innerHeight);
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', applyView);
+applyView();
+renderCard(0);
+$('loading').remove();
+animate();
+</script>
+</body>
+</html>
